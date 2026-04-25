@@ -15,3 +15,5 @@ requests
 
 openai
 python-dotenv
+
+bcrypt
