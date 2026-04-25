@@ -188,7 +188,7 @@ def search_serper(query: str, location: str, api_key: str,
     """POST to serper.dev /shopping and return the raw JSON payload."""
     headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
     payload = {
-        "q": query,
+        "q": f"sushi {query}",
         "location": f"{location}, New York, United States",
         "gl": "us",
         "hl": "en",
