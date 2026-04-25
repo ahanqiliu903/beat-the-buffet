@@ -60,6 +60,43 @@
       color: #2563eb;
       font-variant-numeric: tabular-nums;
     }
+    .price-section {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 2px solid #2563eb;
+    }
+    .price-total {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: #10b981;
+    }
+    .price-loc {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+    }
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 0.95rem;
+    }
+    .price-row .calc {
+      color: #6b7280;
+      font-variant-numeric: tabular-nums;
+    }
+    .price-row .sub {
+      font-weight: 600;
+      color: #10b981;
+      font-variant-numeric: tabular-nums;
+    }
+    .price-unavail {
+      color: #6b7280;
+      font-style: italic;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -81,6 +118,7 @@
   <div id="error"></div>
   <div id="total" class="total"></div>
   <div id="counts"></div>
+  <div id="pricing"></div>
 
   <script>
     const video = document.getElementById("video");
@@ -92,6 +130,7 @@
     const errorEl = document.getElementById("error");
     const totalEl = document.getElementById("total");
     const countsEl = document.getElementById("counts");
+    const pricingEl = document.getElementById("pricing");
 
     const BOX_COLOR = "#2563eb";
 
@@ -114,8 +153,37 @@
       captureBtn.disabled = false;
       totalEl.textContent = "";
       countsEl.innerHTML = "";
+      pricingEl.innerHTML = "";
       statusEl.textContent = "";
       errorEl.textContent = "";
+    }
+
+    function renderPricing(pricing) {
+      if (!pricing || !pricing.available) {
+        pricingEl.innerHTML = `<div class="price-unavail">Pricing unavailable (set SERPER_API_KEY in .env)</div>`;
+        return;
+      }
+      const rows = pricing.breakdown.map((b) => {
+        if (b.subtotal == null) {
+          return `
+            <div class="price-row">
+              <span>${b.display} × ${b.count}</span>
+              <span class="calc">price unavailable</span>
+            </div>`;
+        }
+        return `
+          <div class="price-row">
+            <span>${b.display}</span>
+            <span class="calc">${b.count} × $${b.price_per_piece.toFixed(2)}</span>
+            <span class="sub">$${b.subtotal.toFixed(2)}</span>
+          </div>`;
+      }).join("");
+      pricingEl.innerHTML = `
+        <div class="price-section">
+          <div class="price-total">Plate value: $${pricing.total.toFixed(2)}</div>
+          <div class="price-loc">Estimated from ${pricing.location}, NY ingredient prices</div>
+          ${rows}
+        </div>`;
     }
 
     function drawBoxes(imageBitmap, boxes) {
@@ -164,6 +232,7 @@
       errorEl.textContent = "";
       totalEl.textContent = "";
       countsEl.innerHTML = "";
+      pricingEl.innerHTML = "";
 
       try {
         const fd = new FormData();
@@ -193,6 +262,7 @@
                 <span class="qty">${c.count}</span>
               </div>`)
             .join("");
+          renderPricing(json.pricing);
         }
       } catch (err) {
         statusEl.textContent = "";

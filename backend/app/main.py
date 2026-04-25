@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
 from backend.app.llm import count_with_gpt4o
+from backend.app.pricing import load_prices, price_plate
 from ml.src.detector import build_detector, detect_pieces
 
 load_dotenv()
@@ -32,6 +33,7 @@ async def lifespan(app: FastAPI):
         cfg = yaml.safe_load(f)
     state["detector"] = build_detector()
     state["display"] = _load_display_names(cfg["data"]["labels_csv"])
+    load_prices()
     yield
     state.clear()
 
@@ -81,10 +83,12 @@ async def identify(file: UploadFile = File(...)):
         total += qty
 
     counts.sort(key=lambda c: -c["count"])
+    pricing = price_plate(counts)
 
     return {
         "image_size": [width, height],
         "boxes": box_coords,
         "counts": counts,
         "total": total,
+        "pricing": pricing,
     }
