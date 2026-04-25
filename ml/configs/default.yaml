@@ -10,7 +10,7 @@ data:
 model:
   backbone: efficientnet_b0
   pretrained: true
-  num_classes: 6
+  num_classes: 4
   dropout: 0.2
 
 train:

@@ -1,7 +1,5 @@
 class_id,class_name,display_name
 0,salmon_nigiri,Salmon Nigiri
 1,tuna_nigiri,Tuna Nigiri
-2,california_roll,California Roll
-3,shrimp_tempura_roll,Shrimp Tempura Roll
-4,salmon_sashimi,Salmon Sashimi
-5,tuna_sashimi,Tuna Sashimi
+2,shrimp_tempura_roll,Shrimp Tempura Roll
+3,salmon_sashimi,Salmon Sashimi

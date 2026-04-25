@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beat the Buffet — Sushi Identifier</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    h1 { margin-bottom: 0.25rem; }
+    p.sub { color: #666; margin-top: 0; }
+    .stage {
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+    }
+    video, img.preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    img.preview { display: none; }
+    canvas { display: none; }
+    .controls { display: flex; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap; }
+    button {
+      font-size: 1rem;
+      padding: 0.65rem 1.2rem;
+      border: 0;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+    }
+    button.secondary { background: #6b7280; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pred { padding: 0.5rem 0; }
+    .pred-row { display: flex; justify-content: space-between; font-weight: 600; }
+    .bar-bg { background: #e5e7eb; border-radius: 4px; height: 8px; margin-top: 4px; overflow: hidden; }
+    .bar { background: linear-gradient(90deg, #2563eb, #10b981); height: 100%; transition: width 0.3s ease; }
+    .pred:first-child .pred-row { color: #10b981; }
+    #status { color: #6b7280; min-height: 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>Sushi Identifier</h1>
+  <p class="sub">Point your webcam at a sushi item, then capture.</p>
+
+  <div class="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <img id="preview" class="preview" alt="captured frame" />
+  </div>
+  <canvas id="canvas"></canvas>
+
+  <div class="controls">
+    <button id="capture">Capture & Identify</button>
+    <button id="retake" class="secondary" disabled>Retake</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="results"></div>
+
+  <script>
+    const video = document.getElementById("video");
+    const preview = document.getElementById("preview");
+    const canvas = document.getElementById("canvas");
+    const captureBtn = document.getElementById("capture");
+    const retakeBtn = document.getElementById("retake");
+    const statusEl = document.getElementById("status");
+    const resultsEl = document.getElementById("results");
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false,
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        statusEl.textContent = "Webcam error: " + err.message;
+      }
+    }
+
+    function showVideo() {
+      video.style.display = "block";
+      preview.style.display = "none";
+      retakeBtn.disabled = true;
+      captureBtn.disabled = false;
+    }
+
+    function showPreview(dataUrl) {
+      preview.src = dataUrl;
+      video.style.display = "none";
+      preview.style.display = "block";
+      retakeBtn.disabled = false;
+    }
+
+    captureBtn.addEventListener("click", async () => {
+      if (!video.videoWidth) {
+        statusEl.textContent = "Camera not ready yet — wait a moment.";
+        return;
+      }
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      showPreview(dataUrl);
+
+      const blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", 0.9));
+      const fd = new FormData();
+      fd.append("file", blob, "frame.jpg");
+
+      captureBtn.disabled = true;
+      statusEl.textContent = "Identifying...";
+      resultsEl.innerHTML = "";
+
+      try {
+        const res = await fetch("/identify", { method: "POST", body: fd });
+        if (!res.ok) throw new Error("server " + res.status);
+        const json = await res.json();
+        statusEl.textContent = "Top guess: " + json.predictions[0].display;
+        resultsEl.innerHTML = json.predictions
+          .map((p) => {
+            const pct = (p.confidence * 100).toFixed(1);
+            return `
+              <div class="pred">
+                <div class="pred-row"><span>${p.display}</span><span>${pct}%</span></div>
+                <div class="bar-bg"><div class="bar" style="width:${pct}%"></div></div>
+              </div>`;
+          })
+          .join("");
+      } catch (err) {
+        statusEl.textContent = "Error: " + err.message;
+      }
+    });
+
+    retakeBtn.addEventListener("click", () => {
+      showVideo();
+      statusEl.textContent = "";
+      resultsEl.innerHTML = "";
+    });
+
+    startCamera();
+  </script>
+</body>
+</html>

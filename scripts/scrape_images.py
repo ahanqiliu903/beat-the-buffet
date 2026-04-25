@@ -17,10 +17,8 @@ from icrawler.builtin import BingImageCrawler
 QUERIES = {
     "salmon_nigiri": ["salmon nigiri sushi", "sake nigiri"],
     "tuna_nigiri": ["tuna nigiri sushi", "maguro nigiri"],
-    "california_roll": ["california roll sushi", "california maki"],
     "shrimp_tempura_roll": ["shrimp tempura roll sushi", "ebi tempura maki"],
     "salmon_sashimi": ["salmon sashimi", "sake sashimi slices"],
-    "tuna_sashimi": ["tuna sashimi", "maguro sashimi slices"],
 }
 
 
