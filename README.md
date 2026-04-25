@@ -5,4 +5,4 @@ Goals:\
 - Machine Learning Model for Food Identification\
 - API to pull geographic location\
 - Linear Regression location-based pricing model\
-- "Tables" social system + social media sharing \
+- "Tables" social system + social media sharing\
