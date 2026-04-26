@@ -1,5 +1,6 @@
 import csv
 import io
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -21,12 +22,21 @@ from backend.app.pricing import (
     price_plate,
 )
 from backend.app import tables
-from ml.src.detector import build_detector, detect_pieces
 
 load_dotenv()
 
 CONFIG_PATH = "ml/configs/default.yaml"
 STATIC_DIR = Path(__file__).parent / "static"
+
+# Set ENABLE_DETECTOR=false in production to skip loading YOLO-World (~400 MB).
+# GPT-4o handles all counting/labeling; the detector only draws decorative
+# bounding boxes on the captured image.
+ENABLE_DETECTOR = os.environ.get("ENABLE_DETECTOR", "true").lower() == "true"
+
+ALLOWED_ORIGINS = [o.strip() for o in os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,https://beat-the-buffet-six.vercel.app",
+).split(",") if o.strip()]
 
 state: dict = {}
 
@@ -40,7 +50,11 @@ def _load_display_names(labels_csv: str) -> dict[str, str]:
 async def lifespan(app: FastAPI):
     with open(CONFIG_PATH) as f:
         cfg = yaml.safe_load(f)
-    state["detector"] = build_detector()
+    if ENABLE_DETECTOR:
+        from ml.src.detector import build_detector
+        state["detector"] = build_detector()
+    else:
+        print("[main] ENABLE_DETECTOR=false; skipping YOLO-World load")
     state["display"] = _load_display_names(cfg["data"]["labels_csv"])
     load_prices()
     yield
@@ -50,7 +64,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -153,8 +167,11 @@ async def identify(
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     width, height = img.size
 
-    boxes = detect_pieces(state["detector"], img)
-    box_coords = [[x1, y1, x2, y2] for x1, y1, x2, y2, _ in boxes]
+    box_coords: list[list[int]] = []
+    if "detector" in state:
+        from ml.src.detector import detect_pieces
+        boxes = detect_pieces(state["detector"], img)
+        box_coords = [[x1, y1, x2, y2] for x1, y1, x2, y2, _ in boxes]
 
     items, error = count_with_gpt4o(image_bytes, state["display"])
     if items is None:
