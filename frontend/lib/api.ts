@@ -2,8 +2,14 @@ import type { IdentifyResponse, Table } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
+// Always include ngrok's bypass header. Harmless on localhost / non-ngrok hosts;
+// required for ngrok free tier to return our JSON instead of its HTML interstitial.
+const DEFAULT_HEADERS: HeadersInit = { "ngrok-skip-browser-warning": "true" };
+
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const headers = new Headers(init?.headers);
+  for (const [k, v] of Object.entries(DEFAULT_HEADERS)) headers.set(k, v);
+  const res = await fetch(url, { ...init, headers });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`${res.status} ${text || res.statusText}`);
