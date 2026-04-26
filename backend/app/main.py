@@ -23,19 +23,6 @@ from backend.app.pricing import (
 )
 from backend.app import tables
 
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://beat-the-buffet-six.vercel.app",
-        "http://localhost:3000",  # for local dev
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 load_dotenv()
 
 CONFIG_PATH = "ml/configs/default.yaml"
